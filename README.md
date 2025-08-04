@@ -1,6 +1,7 @@
 - add "id": "{}", to manifest
 - add homepage to manifest
 - integrate this add-on with this script:
+```
 (() => {
   const WRAP = { b: "*", i: "_", s: "-" };
 
@@ -112,6 +113,7 @@
     true
   );
 })();
+```
 
 ✅ completely remove superscript from this add-on
 ✅ add a button to remove all formatting
