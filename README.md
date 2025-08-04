@@ -1,6 +1,6 @@
 - add "id": "{}", to manifest
 - add homepage to manifest
-- integrate this add-on with this script:
+- integrate this extension with this script:
 ```
 (() => {
   const WRAP = { b: "*", i: "_", s: "-" };
