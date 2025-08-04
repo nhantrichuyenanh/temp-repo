@@ -116,24 +116,43 @@
 ```
 
 ✅ completely remove superscript from this add-on
+
 ✅ add a button to remove all formatting
+
 ✅ add a button to show/hide the Live Preview pop-up (previewContainer)
+
 ✅ replace Live Preview title (previewHeader) using h2 tag with something else to avoid confusion with bolden text in Live Preview pop-up
+
 ✅ after clicking the format button (Bold/Italic/Strikethrough/Superscript), clicking it again it should remove the formatting symbols instead of adding more
+
 ✅ remove the gray round box that surrounds each format buttons
+
 ✅ for the Live Preview pop-up, completely remove the gray box and add an outline like a round border
+
 ✅ make the outline round border of Live Preview pop-up to be thin
+
 ✅ I know this sounds crazy but can you put the Live Preview title not in or outside the Live Preview pop-up but on the border itself like a cutout for it
+
 ✅ add the ability to format the text by putting the text cursor in the middle of it besides highlighting it to format
+
 ✅ account for how YouTube deals with special symbols next to formatting symbols because putting them together might render the comment unformatted after user clicking the Comment button, despite that the text is rendered formatted in Live Preview pop-up
+
 ✅ when user hovers over the format buttons, a full circle with the color gray appears
+
 ✅ make the format buttons' symbols a little bit bigger
+
 ✅ make the gray outline border for the Live Preview pop-up thinner
+
 ✅ remove the Live Preview title completely
+
 ✅ make the gray circle when hovering format buttons bigger
+
 ✅ replace ⌫ with an italic T with ₓ and 👁 with 🖋
+
 ✅ fix buttons when editing comment
+
 ✅ make the manifest.json full-fledge like this:
+```
 {
   "manifest_version": 3,
   "name": "YouTube Comment Formatter Hotkeys",
@@ -164,3 +183,4 @@
     }
   }
 }
+```
