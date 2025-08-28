@@ -25,12 +25,50 @@
     z-index: 501;
     transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     box-shadow: 0 0 0 rgba(255, 255, 255, 0.4);
+    cursor: pointer;
 }
 
 .__youtube-timestamps__stamp:hover {
     transform: scaleY(1.3) scaleX(1.2);
     box-shadow: 0 0 4px rgba(255, 255, 255, 0.6);
     background: rgba(255, 255, 255, 0.9);
+}
+
+/* Enhanced styling for stamps with multiple comments */
+.__youtube-timestamps__stamp--multiple {
+    background: linear-gradient(90deg, #ffffff 0%, #3ea6ff 50%, #ffffff 100%);
+    min-width: 3px;
+    max-width: 6px;
+    width: 0.6%;
+    box-shadow: 0 0 2px rgba(62, 166, 255, 0.4);
+}
+
+.__youtube-timestamps__stamp--multiple:hover {
+    transform: scaleY(1.4) scaleX(1.3);
+    box-shadow: 0 0 6px rgba(62, 166, 255, 0.8);
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.9) 0%, #3ea6ff 50%, rgba(255, 255, 255, 0.9) 100%);
+}
+
+.__youtube-timestamps__stamp--multiple::after {
+    content: attr(data-comment-count);
+    position: absolute;
+    top: -18px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(62, 166, 255, 0.9);
+    color: white;
+    font-size: 10px;
+    padding: 2px 4px;
+    border-radius: 8px;
+    font-weight: 500;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+    z-index: 502;
+}
+
+.__youtube-timestamps__stamp--multiple:hover::after {
+    opacity: 1;
 }
 
 .__youtube-timestamps__preview-wrapper {
@@ -54,6 +92,8 @@
     opacity: 0;
     animation: fadeInUp 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
     z-index: 9999;
+    min-height: 80px;
+    max-height: 200px;
 }
 
 @keyframes fadeInUp {
@@ -77,7 +117,7 @@
 .__youtube-timestamps__preview__author {
     display: flex;
     align-items: center;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
 }
 
 .__youtube-timestamps__preview__avatar {
@@ -102,6 +142,19 @@
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
+.__youtube-timestamps__preview__nav {
+    background: rgba(62, 166, 255, 0.15);
+    border: 1px solid rgba(62, 166, 255, 0.3);
+    border-radius: 6px;
+    padding: 4px 8px;
+    margin-bottom: 12px;
+    font-size: 11px;
+    color: #3ea6ff;
+    font-weight: 500;
+    text-align: center;
+    letter-spacing: 0.2px;
+}
+
 .__youtube-timestamps__preview__text {
     color: rgba(255, 255, 255, 0.95);
     font-size: 13px;
@@ -110,23 +163,26 @@
     letter-spacing: 0.1px;
     white-space: pre-line;
     word-wrap: break-word;
-    max-height: 120px;
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+    /* Smooth scrolling */
+    scroll-behavior: smooth;
 }
 
 .__youtube-timestamps__preview__text::-webkit-scrollbar {
-    width: 4px;
+    width: 6px;
 }
 
 .__youtube-timestamps__preview__text::-webkit-scrollbar-track {
-    background: transparent;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 3px;
 }
 
 .__youtube-timestamps__preview__text::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.3);
-    border-radius: 2px;
+    border-radius: 3px;
+    transition: background-color 0.2s ease;
 }
 
 .__youtube-timestamps__preview__text::-webkit-scrollbar-thumb:hover {
@@ -171,6 +227,7 @@
     padding: 12px 16px;
     transition: background-color 0.2s ease;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    cursor: pointer;
 }
 
 #__youtube-timestamps__context-menu .ytp-menuitem:hover {
@@ -210,6 +267,10 @@
     .__youtube-timestamps__preview__text {
         color: rgba(15, 15, 15, 0.9);
         scrollbar-color: rgba(0, 0, 0, 0.3) transparent;
+    }
+
+    .__youtube-timestamps__preview__text::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.05);
     }
 
     .__youtube-timestamps__preview__text::-webkit-scrollbar-thumb {
@@ -279,6 +340,10 @@ html[dark] .__youtube-timestamps__preview__text {
     .__youtube-timestamps__preview__text-stamp:hover {
         transform: none;
     }
+
+    .__youtube-timestamps__stamp--multiple::after {
+        transition: none;
+    }
 }
 
 /* High contrast mode support */
@@ -286,6 +351,11 @@ html[dark] .__youtube-timestamps__preview__text {
     .__youtube-timestamps__stamp {
         background: #ffffff;
         border: 2px solid #000000;
+    }
+
+    .__youtube-timestamps__stamp--multiple {
+        background: #3ea6ff;
+        border: 2px solid #ffffff;
     }
 
     .__youtube-timestamps__preview {
