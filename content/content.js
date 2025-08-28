@@ -131,7 +131,7 @@ function showPreview(timeComment) {
 
     // Match tooltip width for consistency with YouTube's native UI
     const tooltipBg = tooltip.querySelector('.ytp-tooltip-bg')
-    let tooltipWidth = 160 // default fallback
+    let tooltipWidth = 163 // default fallback
     if (tooltipBg && tooltipBg.style.width) {
         const tooltipBgWidth = tooltipBg.style.width
         if (tooltipBgWidth.endsWith('px')) {
@@ -156,28 +156,6 @@ function showPreview(timeComment) {
         previewLeft = -halfPreviewWidth
     }
     preview.style.left = (previewLeft - PREVIEW_BORDER_SIZE) + 'px'
-
-    // Position preview below the tooltip
-    const tooltipHeight = tooltip.offsetHeight || 0
-    const textAboveVideoPreview = tooltip.querySelector('.ytp-tooltip-edu')
-    const additionalOffset = textAboveVideoPreview ? textAboveVideoPreview.clientHeight : 0
-    preview.style.bottom = -(tooltipHeight + additionalOffset + 8) + 'px'
-
-    const tooltipTop = tooltip.style.top
-    if (tooltipTop.endsWith('px')) {
-        let previewHeight = parseFloat(tooltipTop) - 2*PREVIEW_MARGIN
-        if (textAboveVideoPreview) {
-            previewHeight -= textAboveVideoPreview.clientHeight
-        }
-        if (previewHeight > 0) {
-            preview.style.maxHeight = previewHeight + 'px'
-        }
-    }
-
-    const highlightedTextFragment = preview.querySelector('.__youtube-timestamps__preview__text-stamp')
-    if (highlightedTextFragment) {
-        highlightedTextFragment.scrollIntoView({block: 'nearest'})
-    }
 }
 
 function getOrCreatePreview() {

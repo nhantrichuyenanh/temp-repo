@@ -1,15 +1,137 @@
 <!DOCTYPE html>
+<html lang="en">
+
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Options</title>
-  <link rel="stylesheet" href="options.css">
+  <style>
+    :root {
+      --background-color: #ffffff;
+      --text-color: #000000;
+      --border-color: #dddddd;
+      --primary-color: #007bff;
+      --primary-hover: #0056b3;
+      --surface-color: #f8f9fa;
+      --shadow-color: rgba(0, 0, 0, 0.1);
+      --border-radius: 8px;
+      --spacing-sm: 0.5rem;
+      --spacing-md: 1rem;
+      --spacing-lg: 1.5rem;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: var(--background-color);
+      color: var(--text-color);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      line-height: 1.5;
+      margin: 0;
+      padding: var(--spacing-lg);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .container {
+      background: var(--surface-color);
+      border: 1px solid var(--border-color);
+      border-radius: var(--border-radius);
+      box-shadow: 0 2px 8px var(--shadow-color);
+      padding: var(--spacing-lg);
+      width: 100%;
+      max-width: 400px;
+    }
+
+    h3 {
+      margin: 0 0 var(--spacing-lg) 0;
+      font-size: 1.1rem;
+      font-weight: 500;
+      color: var(--text-color);
+      text-align: center;
+      opacity: 0.8;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-sm);
+      margin-bottom: var(--spacing-lg);
+    }
+
+    label {
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--text-color);
+    }
+
+    input[type="number"] {
+      padding: var(--spacing-sm) var(--spacing-md);
+      border: 1px solid var(--border-color);
+      border-radius: var(--border-radius);
+      font-size: 1rem;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      background-color: var(--background-color);
+      color: var(--text-color);
+    }
+
+    input[type="number"]:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+    }
+
+    button {
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      padding: var(--spacing-md) var(--spacing-lg);
+      border-radius: var(--border-radius);
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.2s ease, transform 0.1s ease;
+      width: 100%;
+    }
+
+    button:hover {
+      background-color: var(--primary-hover);
+    }
+
+    button:active {
+      transform: translateY(1px);
+    }
+
+    button:focus {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.3);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        transition: none !important;
+      }
+    }
+  </style>
 </head>
 
 <body>
-  <h3>You will need to reload your youtube tab to reflect changes</h3>
-  <form>
-    <input type="number" id="maxResults" min="1">
-    <label for="maxResults">Max comments</label>
-    <button id="save" type="submit">Save</button>
-  </form>
+  <div class="container">
+    <h3>You will need to reload your youtube tab to reflect changes</h3>
+    <form>
+      <div class="form-group">
+        <label for="maxResults">Max comments</label>
+        <input type="number" id="maxResults" min="1">
+      </div>
+      <button id="save" type="submit">Save Settings</button>
+    </form>
+  </div>
   <script src="options.js"></script>
 </body>
+
+</html>
