@@ -54,6 +54,9 @@
 }
 
 .__youtube-timestamps__preview {
+    min-width: 260px;
+    max-width: 520px;
+    width: 320px;
     position: absolute;
     overflow: hidden;
     background: rgba(40, 40, 40, 0.98);
@@ -70,7 +73,7 @@
     animation: fadeInUp 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
     z-index: 9999;
     min-height: 80px;
-    max-height: 200px;
+    max-height: 260px;
 }
 
 @keyframes fadeInUp {
@@ -122,17 +125,24 @@
 .__youtube-timestamps__preview__nav {
     background: rgba(62, 166, 255, 0.15);
     border: 1px solid rgba(62, 166, 255, 0.3);
-    border-radius: 6px;
-    padding: 4px 8px;
-    margin-bottom: 12px;
-    font-size: 11px;
+    border-radius: 8px;
+    padding: 6px 12px;
+    margin: 8px 0 0;
+    font-size: 12px;
     color: #3ea6ff;
-    font-weight: 500;
+    font-weight: 600;
     text-align: center;
     letter-spacing: 0.2px;
+    display: block;
+    width: calc(100% - 32px);
+    max-width: 420px;
+    margin-left: auto;
+    margin-right: auto;
+    box-sizing: border-box;
 }
 
 .__youtube-timestamps__preview__text {
+    margin-bottom: 12px;
     color: rgba(255, 255, 255, 0.95);
     font-size: 13px;
     font-weight: 400;
@@ -143,7 +153,6 @@
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
-    /* Smooth scrolling */
     scroll-behavior: smooth;
 }
 
