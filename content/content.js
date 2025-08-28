@@ -1,26 +1,25 @@
+// CONFIGURATION //
 const PREVIEW_BORDER_SIZE = 2
 const PREVIEW_MARGIN = 8
-const PREVIEW_MAX_HEIGHT = 200 // Increased from 120px
+const PREVIEW_MAX_HEIGHT = 200
 const PREVIEW_MIN_HEIGHT = 80
 
 main()
-
 onLocationHrefChange(() => {
     removeBar()
-    removeContextMenu()
     main()
 })
 
 document.addEventListener('click', e => {
     const stamp = e.target.closest('.__youtube-timestamps__stamp')
     if (!stamp) {
-        hideContextMenu()
+        hidePreview()
     }
 }, true)
 document.addEventListener('contextmenu', e => {
     const stamp = e.target.closest('.__youtube-timestamps__stamp')
     if (!stamp) {
-        hideContextMenu()
+        hidePreview()
     }
 }, true)
 
@@ -61,13 +60,10 @@ function fetchTimeComments(videoId) {
 function addTimeComments(timeComments) {
     const bar = getOrCreateBar()
     const videoDuration = getVideo().duration
-    let contextMenuTimeComment = null
-
-    // Group comments by timestamp to handle duplicates
     const groupedComments = new Map()
 
     for (const tc of timeComments) {
-        if (tc.time > videoDuration) {
+        if (typeof tc.time !== 'number' || tc.time > videoDuration) {
             continue
         }
 
@@ -78,16 +74,13 @@ function addTimeComments(timeComments) {
         groupedComments.get(timeKey).push(tc)
     }
 
-    // Create stamps for each unique timestamp
     for (const [timeKey, commentsAtTime] of groupedComments) {
         const time = parseFloat(timeKey)
         const stamp = document.createElement('div')
         stamp.classList.add('__youtube-timestamps__stamp')
 
-        // Add visual indicator for multiple comments
         if (commentsAtTime.length > 1) {
             stamp.classList.add('__youtube-timestamps__stamp--multiple')
-            stamp.setAttribute('data-comment-count', commentsAtTime.length)
         }
 
         const offset = time / videoDuration * 100
@@ -104,46 +97,137 @@ function addTimeComments(timeComments) {
             hidePreview()
         })
 
-        stamp.addEventListener('wheel', withWheelThrottle((deltaY) => {
+        const SWITCH_THRESHOLD = 100
+        stamp.addEventListener('wheel', withWheelThrottle((deltaY, lastEvent) => {
             const preview = getOrCreatePreview()
             const textElement = preview.querySelector('.__youtube-timestamps__preview__text')
 
-            // Check if we should scroll through comments or scroll within comment text
-            if (commentsAtTime.length > 1 && Math.abs(deltaY) > 50) {
-                // Scroll through multiple comments
-                e.preventDefault()
+            if (!(preview && preview.style.display !== 'none')) {
+                showPreview(commentsAtTime[currentCommentIndex], commentsAtTime.length, currentCommentIndex)
+            }
+
+            const switchTo = (newIndex) => {
+                currentCommentIndex = newIndex
+                showPreview(commentsAtTime[currentCommentIndex], commentsAtTime.length, currentCommentIndex)
+                const newText = document.querySelector('.__youtube-timestamps__preview__text')
+                if (newText) newText.scrollTop = 0
+            }
+
+            if (textElement && textElement.scrollHeight > textElement.clientHeight) {
+                const atTop = textElement.scrollTop <= 1
+                const atBottom = (textElement.scrollTop + textElement.clientHeight) >= (textElement.scrollHeight - 1)
+
+                if (deltaY > 0) {
+                    // user scrolling down
+                    if (!atBottom) {
+                        // scroll inside preview
+                        textElement.scrollBy({ top: deltaY, left: 0, behavior: 'auto' })
+                        return
+                    } else {
+                        // at bottom -> allow switching to next comment if big enough wheel
+                        if (commentsAtTime.length > 1 && Math.abs(deltaY) >= SWITCH_THRESHOLD) {
+                            switchTo((currentCommentIndex + 1) % commentsAtTime.length)
+                            return
+                        }
+                        return
+                    }
+                } else if (deltaY < 0) {
+                    // user scrolling up
+                    if (!atTop) {
+                        // scroll inside preview
+                        textElement.scrollBy({ top: deltaY, left: 0, behavior: 'auto' })
+                        return
+                    } else {
+                        // at top -> allow switching to previous comment if big enough wheel
+                        if (commentsAtTime.length > 1 && Math.abs(deltaY) >= SWITCH_THRESHOLD) {
+                            switchTo((currentCommentIndex - 1 + commentsAtTime.length) % commentsAtTime.length)
+                            return
+                        }
+                        return
+                    }
+                } else {
+                    return
+                }
+            }
+
+            // if text is not scrollable and there are multiple comments then switch between them as before
+            if (commentsAtTime.length > 1 && Math.abs(deltaY) >= SWITCH_THRESHOLD) {
                 if (deltaY > 0) {
                     currentCommentIndex = (currentCommentIndex + 1) % commentsAtTime.length
                 } else {
                     currentCommentIndex = (currentCommentIndex - 1 + commentsAtTime.length) % commentsAtTime.length
                 }
                 showPreview(commentsAtTime[currentCommentIndex], commentsAtTime.length, currentCommentIndex)
-            } else {
-                // Scroll within comment text
-                if (textElement && textElement.scrollHeight > textElement.clientHeight) {
-                    textElement.scrollBy(0, deltaY)
-                }
             }
-        }))
+        }), { passive: false })
 
-        stamp.addEventListener('contextmenu', e => {
-            e.preventDefault()
-            e.stopPropagation()
-            const currentComment = commentsAtTime[currentCommentIndex]
-            if (currentComment === contextMenuTimeComment && isContextMenuVisible()) {
-                hideContextMenu()
-            } else {
-                showContextMenu(currentComment, commentsAtTime, e.pageX, e.pageY)
-                contextMenuTimeComment = currentComment
-            }
-        })
-
-        // Click to cycle through comments when multiple exist
+        // Left-click cycles comments like before
         stamp.addEventListener('click', e => {
             if (commentsAtTime.length > 1) {
                 e.preventDefault()
                 currentCommentIndex = (currentCommentIndex + 1) % commentsAtTime.length
                 showPreview(commentsAtTime[currentCommentIndex], commentsAtTime.length, currentCommentIndex)
+            }
+        })
+
+        // Middle-click (mouse-wheel click) opens the comment in a new tab
+        // Use 'auxclick' for middle click; also add 'mousedown' fallback for browsers that don't fire auxclick
+        const openCommentInNewTab = (() => {
+    let lastOpenedAt = 0
+    const DEBOUNCE_MS = 400
+    return (comment) => {
+        try {
+            const now = Date.now()
+            if (now - lastOpenedAt < DEBOUNCE_MS) return
+            lastOpenedAt = now
+
+            const videoId = getVideoId()
+            const commentId = comment && comment.commentId
+            if (videoId && commentId) {
+                window.open(`https://www.youtube.com/watch?v=${videoId}&lc=${commentId}`, '_blank')
+            }
+        } catch (err) {
+            console.error('Failed to open comment in new tab', err)
+        }
+    }
+})()
+
+const supportsAuxclick = ('onauxclick' in window)
+
+// attach only one of these, not both
+if (supportsAuxclick) {
+    stamp.addEventListener('auxclick', e => {
+        if (e.button === 1) { // middle button
+            e.preventDefault()
+            e.stopPropagation()
+            openCommentInNewTab(commentsAtTime[currentCommentIndex])
+        }
+    })
+} else {
+    // fallback for older browsers that don't fire auxclick
+    stamp.addEventListener('mousedown', e => {
+        if (e.button === 1) {
+            e.preventDefault()
+            e.stopPropagation()
+            openCommentInNewTab(commentsAtTime[currentCommentIndex])
+        }
+    })
+}
+
+        stamp.addEventListener('auxclick', e => {
+            if (e.button === 1) { // middle button
+                e.preventDefault()
+                e.stopPropagation()
+                openCommentInNewTab(commentsAtTime[currentCommentIndex])
+            }
+        })
+
+        // Fallback: handle middle-button mousedown in case auxclick isn't supported
+        stamp.addEventListener('mousedown', e => {
+            if (e.button === 1) {
+                e.preventDefault()
+                e.stopPropagation()
+                openCommentInNewTab(commentsAtTime[currentCommentIndex])
             }
         })
     }
@@ -176,16 +260,36 @@ function getTooltip() {
 
 function showPreview(timeComment, totalComments = 1, currentIndex = 0) {
     const tooltip = getTooltip()
+    if (!tooltip) return
     const preview = getOrCreatePreview()
     preview.style.display = ''
 
-    // Update content
-    preview.querySelector('.__youtube-timestamps__preview__avatar').src = timeComment.authorAvatar
-    preview.querySelector('.__youtube-timestamps__preview__name').textContent = timeComment.authorName
+    // --- Lift the preview a bit above the bottom of the tooltip so it doesn't overlap controls ---
+    preview.style.bottom = (PREVIEW_MARGIN + 12) + 'px'   // move preview up by 12px + configured margin
+    // Clear transform so animation ends with the preview in the final elevated position
+    preview.style.transform = 'translateY(0) scale(1)'
+
+    // Update content (guard for missing data)
+    preview.querySelector('.__youtube-timestamps__preview__avatar').src = timeComment.authorAvatar || ''
+    preview.querySelector('.__youtube-timestamps__preview__name').textContent = timeComment.authorName || 'Unknown'
 
     const textNode = preview.querySelector('.__youtube-timestamps__preview__text')
     textNode.innerHTML = ''
-    textNode.appendChild(highlightTextFragment(timeComment.text, timeComment.timestamp))
+
+    // Use text safely — ensure we don't pass undefined into split()
+    let safeText = (typeof timeComment.text === 'string') ? timeComment.text : ''
+    const safeFragment = (typeof timeComment.timestamp === 'string') ? timeComment.timestamp : ''
+
+    // If the comment has no visible text, show a clear placeholder rather than leaving it blank.
+    if (!safeText || !safeText.trim()) {
+        safeText = '(no comment text)'
+        // make placeholder slightly dimmer but still readable
+        textNode.style.opacity = '0.88'
+    } else {
+        textNode.style.opacity = '1'
+    }
+
+    textNode.appendChild(highlightTextFragment(safeText, safeFragment))
 
     // Add navigation indicator for multiple comments
     let navIndicator = preview.querySelector('.__youtube-timestamps__preview__nav')
@@ -215,12 +319,12 @@ function showPreview(timeComment, totalComments = 1, currentIndex = 0) {
     preview.style.width = tooltipWidth + 'px'
 
     // Measure content height and adjust preview height
-    const tempHeight = preview.style.height
     preview.style.height = 'auto'
     const contentHeight = preview.scrollHeight
     const idealHeight = Math.max(PREVIEW_MIN_HEIGHT, Math.min(PREVIEW_MAX_HEIGHT, contentHeight))
     preview.style.height = idealHeight + 'px'
 
+    // Position horizontally (unchanged)
     const halfPreviewWidth = tooltipWidth / 2
     const playerRect = document.querySelector('#movie_player .ytp-progress-bar').getBoundingClientRect()
     const pivot = preview.parentElement.getBoundingClientRect().left
@@ -236,16 +340,24 @@ function showPreview(timeComment, totalComments = 1, currentIndex = 0) {
     }
     preview.style.left = (previewLeft - PREVIEW_BORDER_SIZE) + 'px'
 
-    // Ensure text element has proper scrolling
-    textNode.style.maxHeight = (idealHeight - 80) + 'px' // Account for header and navigation
+    // --- Calculate header/nav/padding heights to avoid clipping the text label ---
+    const headerEl = preview.querySelector('.__youtube-timestamps__preview__author')
+    const headerH = headerEl ? headerEl.offsetHeight : 0
+    const navH = navIndicator ? navIndicator.offsetHeight : 0
+    // CSS padding is 16px top + 16px bottom (32 total), account for that
+    const paddingTotal = 32
+    const textMax = Math.max(24, idealHeight - headerH - navH - paddingTotal)
+    textNode.style.maxHeight = textMax + 'px'
 }
 
 function getOrCreatePreview() {
     const tooltip = getTooltip()
+    if (!tooltip) return document.createElement('div') // fail-safe
     let preview = tooltip.querySelector('.__youtube-timestamps__preview')
     if (!preview) {
         preview = document.createElement('div')
         preview.classList.add('__youtube-timestamps__preview')
+
         const previewWrapper = document.createElement('div')
         previewWrapper.classList.add('__youtube-timestamps__preview-wrapper')
         previewWrapper.appendChild(preview)
@@ -271,13 +383,40 @@ function getOrCreatePreview() {
         const textElement = document.createElement('div')
         textElement.classList.add('__youtube-timestamps__preview__text')
         preview.appendChild(textElement)
+
+        // Attach wheel listener on the preview text itself to enable natural scrolling there.
+        // Use passive:false so we can prevent default on touchpads if necessary.
+        textElement.addEventListener('wheel', (ev) => {
+            if (textElement.scrollHeight > textElement.clientHeight) {
+                if (ev.cancelable) ev.preventDefault() // stop page scrolling
+                textElement.scrollBy({ top: ev.deltaY, left: 0, behavior: 'auto' })
+            }
+        }, { passive: false })
     }
     return preview
 }
 
+// Safely highlight a fragment inside text. If fragment is empty/invalid, simply return plain text node.
 function highlightTextFragment(text, fragment) {
     const result = document.createDocumentFragment()
-    const parts = text.split(fragment)
+
+    if (!fragment) {
+        // No fragment to highlight — return text as-is
+        result.appendChild(document.createTextNode(text))
+        return result
+    }
+
+    // Ensure both are strings
+    const safeText = String(text)
+    const safeFragment = String(fragment)
+
+    // If fragment not present, fall back to plain text
+    if (safeFragment === '' || safeText.indexOf(safeFragment) === -1) {
+        result.appendChild(document.createTextNode(safeText))
+        return result
+    }
+
+    const parts = safeText.split(safeFragment)
     for (let i = 0; i < parts.length; i++) {
         const part = parts[i]
         if (part) {
@@ -286,7 +425,7 @@ function highlightTextFragment(text, fragment) {
         if (i < parts.length - 1) {
             const fragmentNode = document.createElement('span')
             fragmentNode.classList.add('__youtube-timestamps__preview__text-stamp')
-            fragmentNode.textContent = fragment
+            fragmentNode.textContent = safeFragment
             result.appendChild(fragmentNode)
         }
     }
@@ -314,10 +453,20 @@ function parseParams(href) {
     return params
 }
 
+// Improved wheel-throttle: accumulates deltaY and passes the last event too.
+// NOTE: the returned wrapper will be attached with { passive: false } so e.preventDefault() can be used.
+// The wrapper *itself* will call preventDefault() on the original event before accumulating,
+// ensuring the page does not scroll.
 function withWheelThrottle(callback) {
     let deltaYAcc = 0
     let afRequested = false
+    let lastEvent = null
     return (e) => {
+        // Prevent the browser's default page scroll when wheel happens on a stamp.
+        // Only call preventDefault if the event is cancelable (some browsers may not allow it otherwise).
+        if (e.cancelable) e.preventDefault()
+
+        lastEvent = e
         deltaYAcc += e.deltaY
 
         if (afRequested) {
@@ -326,10 +475,14 @@ function withWheelThrottle(callback) {
         afRequested = true
 
         window.requestAnimationFrame(() => {
-            callback(deltaYAcc)
-
-            deltaYAcc = 0
-            afRequested = false
+            try {
+                callback(deltaYAcc, lastEvent)
+            } finally {
+                // reset accumulators
+                deltaYAcc = 0
+                afRequested = false
+                lastEvent = null
+            }
         })
     }
 }
@@ -343,101 +496,4 @@ function onLocationHrefChange(callback) {
         }
     })
     observer.observe(document.querySelector("body"), {childList: true, subtree: true})
-}
-
-function showContextMenu(timeComment, allCommentsAtTime, x, y) {
-    const contextMenu = getOrCreateContextMenu()
-    contextMenu.style.display = ''
-    adjustContextMenuSizeAndPosition(contextMenu, x, y)
-    fillContextMenuData(contextMenu, timeComment, allCommentsAtTime)
-}
-
-function fillContextMenuData(contextMenu, timeComment, allCommentsAtTime = []) {
-    contextMenu.dataset.commentId = timeComment.commentId
-    contextMenu.dataset.allCommentIds = JSON.stringify(allCommentsAtTime.map(c => c.commentId))
-}
-
-function adjustContextMenuSizeAndPosition(contextMenu, x, y) {
-    const menuHeight = contextMenu.querySelector('.ytp-panel-menu').clientHeight
-    contextMenu.style.height = menuHeight + 'px'
-    contextMenu.style.top = (y - menuHeight) + 'px'
-    contextMenu.style.left = x + 'px'
-}
-
-function getOrCreateContextMenu() {
-    let contextMenu = getContextMenu()
-    if (!contextMenu) {
-        contextMenu = document.createElement('div')
-        contextMenu.id = '__youtube-timestamps__context-menu'
-        contextMenu.classList.add('ytp-popup')
-        document.body.appendChild(contextMenu)
-
-        const panelElement = document.createElement('div')
-        panelElement.classList.add('ytp-panel')
-        contextMenu.appendChild(panelElement)
-
-        const menuElement = document.createElement('div')
-        menuElement.classList.add('ytp-panel-menu')
-        panelElement.appendChild(menuElement)
-
-        menuElement.appendChild(menuItemElement("Open in New Tab", () => {
-            const videoId = getVideoId()
-            const commentId = contextMenu.dataset.commentId
-            window.open(`https://www.youtube.com/watch?v=${videoId}&lc=${commentId}`, '_blank')
-        }))
-
-        // Add menu item for opening all comments when multiple exist
-        menuElement.appendChild(menuItemElement("Open All Comments", () => {
-            const videoId = getVideoId()
-            try {
-                const allCommentIds = JSON.parse(contextMenu.dataset.allCommentIds || '[]')
-                allCommentIds.forEach(commentId => {
-                    window.open(`https://www.youtube.com/watch?v=${videoId}&lc=${commentId}`, '_blank')
-                })
-            } catch (e) {
-                console.error('Failed to parse comment IDs:', e)
-            }
-        }))
-    }
-    return contextMenu
-}
-
-function menuItemElement(label, callback) {
-    const itemElement = document.createElement('div')
-    itemElement.classList.add('ytp-menuitem')
-    itemElement.addEventListener('click', callback)
-
-    const iconElement = document.createElement('div')
-    iconElement.classList.add('ytp-menuitem-icon')
-    itemElement.appendChild(iconElement)
-
-    const labelElement = document.createElement('div')
-    labelElement.classList.add('ytp-menuitem-label')
-    labelElement.textContent = label
-    itemElement.appendChild(labelElement)
-
-    return itemElement
-}
-
-function getContextMenu() {
-    return document.querySelector('#__youtube-timestamps__context-menu')
-}
-
-function isContextMenuVisible() {
-    const contextMenu = getContextMenu()
-    return contextMenu && !contextMenu.style.display
-}
-
-function hideContextMenu() {
-    const contextMenu = getContextMenu()
-    if (contextMenu) {
-        contextMenu.style.display = 'none'
-    }
-}
-
-function removeContextMenu() {
-    const contextMenu = getContextMenu()
-    if (contextMenu) {
-        contextMenu.remove()
-    }
 }
